@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HireMind – AI Voice Interview & Resume Evaluation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <span class="logo-circle">H</span>
+        <div class="brand-text">
+          <span class="title">HireMind</span>
+          <span class="subtitle">AI Interview Studio</span>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="nav-item active" data-view="dashboardView">🏠 Dashboard</button>
+        <button class="nav-item" data-view="resumeView">📄 Resume & ATS</button>
+        <button class="nav-item" data-view="interviewView">🎤 Voice Interview</button>
+        <button class="nav-item" data-view="profileView">👤 Profile</button>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="nav-item ghost" id="btnLogout">↩ Logout</button>
+      </div>
+    </aside>
+
+    <div class="app">
+      <header class="topbar">
+        <div>
+          <h1>AI Interview & Resume Intelligence</h1>
+          <p>Upload, analyze, and practice interviews in one smart workspace.</p>
+        </div>
+        <div class="topbar-user">
+          <div class="user-pill" id="userPill">
+            <span class="avatar" id="userAvatar">?</span>
+            <span class="user-meta">
+              <span class="name" id="userName">Guest</span>
+              <span class="role" id="userEmail">Not signed in</span>
+            </span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Auth view -->
+      <section class="card" id="authView">
+        <h2><span class="icon">🔐</span> Sign in to HireMind</h2>
+        <div class="auth-layout">
+          <div class="auth-column">
+            <h3>Continue with Google</h3>
+            <p class="muted">
+              For a real deployment, connect Google Identity and pass the user email/name
+              to the backend. For this demo, we simulate Google sign-in with your email.
+            </p>
+            <button type="button" class="btn btn-primary" id="btnGoogleSignIn">
+              <span>Continue with Google</span>
+            </button>
+          </div>
+          <div class="auth-column">
+            <div class="auth-tabs">
+              <button type="button" class="auth-tab active" data-mode="login">Sign in</button>
+              <button type="button" class="auth-tab" data-mode="register">Create account</button>
+            </div>
+
+            <form id="authForm" class="auth-form">
+              <div class="field" id="fieldName">
+                <label for="authName">Full name</label>
+                <input type="text" id="authName" autocomplete="name" placeholder="Alex Doe" />
+              </div>
+              <div class="field">
+                <label for="authEmail">Email</label>
+                <input type="text" id="authEmail" autocomplete="email" placeholder="you@example.com" />
+              </div>
+              <div class="field">
+                <label for="authPassword">Password</label>
+                <input type="password" id="authPassword" autocomplete="current-password" placeholder="••••••••" />
+              </div>
+              <button type="submit" class="btn btn-primary" id="btnAuthSubmit">Sign in</button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- Dashboard view -->
+      <section class="card hidden" id="dashboardView">
+        <h2><span class="icon">📊</span> Overview</h2>
+        <p class="muted">
+          Welcome to your AI interview workspace. Start with resume analysis, then move to voice-based mock interviews.
+        </p>
+        <div class="dashboard-grid">
+          <div class="stat-card">
+            <span class="label">Last ATS score</span>
+            <span class="value" id="statLastScore">–</span>
+          </div>
+          <div class="stat-card">
+            <span class="label">Sessions this run</span>
+            <span class="value" id="statSessions">0</span>
+          </div>
+          <div class="stat-card">
+            <span class="label">Average interview score</span>
+            <span class="value" id="statAvgInterview">–</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Resume & ATS view -->
+      <section class="card hidden" id="resumeView">
+        <h2><span class="icon">📄</span> Resume & ATS Analysis</h2>
+
+        <!-- 1. Resume Upload -->
+        <div class="subcard">
+          <h3>Resume upload</h3>
+          <div class="upload-zone" id="uploadZone">
+            <input type="file" id="resumeFile" accept=".pdf" />
+            <div class="label" id="uploadLabel">Drop PDF here or click to upload</div>
+            <div class="hint">PDF only</div>
+          </div>
+          <p id="parseStatus" class="mt-1 hidden"></p>
+        </div>
+
+        <!-- 2. Job Description -->
+        <div class="subcard">
+          <h3>Target job description</h3>
+          <label for="jobDesc">Paste the job description to match and evaluate against</label>
+          <textarea id="jobDesc" placeholder="Paste full or excerpt of job description..."></textarea>
+        </div>
+
+        <!-- 3. ATS Score & Analysis -->
+        <div class="subcard">
+          <div class="subcard-header">
+            <h3>ATS score & skill match</h3>
+            <button type="button" class="btn btn-primary" id="btnAts">Calculate ATS Score</button>
+          </div>
+          <div id="atsResult" class="hidden mt-2">
+            <div class="ats-score-circle" id="atsCircle"><div class="inner"><span id="atsScoreNum">0</span>%</div></div>
+            <p style="text-align:center; color: var(--text-muted);">ATS Score</p>
+            <label class="mt-1">Matched keywords</label>
+            <div class="skill-tags" id="matchedSkills"></div>
+            <label class="mt-1">Missing / improvement areas</label>
+            <div class="skill-tags" id="missingSkills"></div>
+          </div>
+        </div>
+
+        <!-- 4. AI Resume Feedback -->
+        <div class="subcard">
+          <div class="subcard-header">
+            <h3>AI resume feedback</h3>
+            <button type="button" class="btn btn-primary" id="btnFeedback">Get AI Feedback</button>
+          </div>
+          <div id="feedbackResult" class="hidden mt-2">
+            <label>Strengths</label>
+            <ul class="feedback-list" id="feedbackStrengths"></ul>
+            <label class="mt-1">Weaknesses</label>
+            <ul class="feedback-list weaknesses" id="feedbackWeaknesses"></ul>
+            <label class="mt-1">Suggestions</label>
+            <ul class="feedback-list suggestions" id="feedbackSuggestions"></ul>
+            <div class="recommendation" id="feedbackRecommendation"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Voice Interview view -->
+      <section class="card hidden" id="interviewView">
+        <h2><span class="icon">🎤</span> AI Voice Interview</h2>
+        <p class="muted">
+          Get personalized questions, answer by voice, and receive instant AI evaluation.
+        </p>
+        <div class="voice-controls">
+          <button type="button" class="btn btn-primary" id="btnStartInterview">Generate Questions & Start</button>
+        </div>
+        <div id="interviewArea" class="hidden interview-flow mt-2">
+          <p><strong>Question <span id="currentQNum">1</span> of <span id="totalQNum">0</span></strong></p>
+          <div class="question-box" id="currentQuestion"></div>
+          <div class="voice-controls">
+            <button type="button" class="btn btn-secondary" id="btnSpeakQuestion">🔊 Speak Question</button>
+            <button type="button" class="btn btn-danger" id="btnRecord">🎤 Record Answer</button>
+            <span class="status-badge" id="recordStatus">Stopped</span>
+          </div>
+          <label>Your answer (editable)</label>
+          <div class="answer-box" id="answerText" contenteditable="true" data-placeholder="Click Record and speak, or type here..."></div>
+          <div class="voice-controls mt-1">
+            <button type="button" class="btn btn-primary" id="btnEvaluate">Evaluate Answer</button>
+            <button type="button" class="btn btn-secondary" id="btnNextQuestion">Next Question</button>
+          </div>
+          <div id="evalResult" class="hidden eval-result"></div>
+        </div>
+      </section>
+
+      <!-- Profile / account view -->
+      <section class="card hidden" id="profileView">
+        <h2><span class="icon">👤</span> Profile & account</h2>
+        <p class="muted">
+          Basic account settings for this demo. In a production app, this would also let you manage interview
+          history, saved resumes, and preferences.
+        </p>
+        <div class="subcard">
+          <label>Email</label>
+          <p id="profileEmail" class="muted">–</p>
+          <label class="mt-1">Name</label>
+          <p id="profileName" class="muted">–</p>
+        </div>
+      </section>
+    </div>
+  </div>
+  <script src="/static/app.js"></script>
+</body>
+</html>

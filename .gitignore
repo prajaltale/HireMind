@@ -1,0 +1,22 @@
+# Environment (contains secrets - do not commit)
+.env
+.env.*
+
+# Python
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Local databases / artifacts
+data.db
+*.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo

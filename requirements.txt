@@ -1,0 +1,19 @@
+# Web framework
+fastapi==0.109.2
+uvicorn[standard]==0.27.1
+
+# Resume parsing
+pdfplumber==0.10.3
+
+# AI / LLM
+google-generativeai>=0.5.0,<0.9
+
+# Environment & utilities
+python-dotenv==1.0.1
+
+# Auth & security
+python-jose[cryptography]==3.3.0
+passlib==1.7.4
+
+# File handling
+python-multipart==0.0.9
