@@ -102,6 +102,8 @@ function syncAuthUI() {
     userAvatarEl.textContent = (name || email || "?").charAt(0).toUpperCase();
     profileEmail.textContent = email || "–";
     profileName.textContent = name || "–";
+    // Load dashboard stats when authenticated
+    loadDashboardStats();
   } else {
     authView.classList.remove("hidden");
     dashboardView.classList.add("hidden");
@@ -226,6 +228,36 @@ function apiFetch(path, options = {}) {
   return fetch(`${API_BASE}${path}`, { ...options, headers });
 }
 
+// ---------- Dashboard Stats Loading ----------
+async function loadDashboardStats() {
+  if (!auth.token) {
+    console.log("No auth token, skipping dashboard stats load");
+    return;
+  }
+  try {
+    const r = await apiFetch("/api/dashboard/stats");
+    if (!r.ok) {
+      console.error("Failed to fetch dashboard stats, status:", r.status);
+      const errorData = await r.json();
+      console.error("Error details:", errorData);
+      return;
+    }
+    const data = await r.json();
+    console.log("Dashboard stats loaded:", data);
+    // Handle values properly - don't use || because 0 is falsy
+    statLastScore.textContent = data.last_ats_score !== null && data.last_ats_score !== undefined ? data.last_ats_score : "–";
+    statSessions.textContent = data.sessions_count !== null && data.sessions_count !== undefined ? String(data.sessions_count) : "0";
+    statAvgInterview.textContent = data.avg_interview_score !== null && data.avg_interview_score !== undefined ? data.avg_interview_score : "–";
+    console.log("Dashboard updated successfully", {
+      lastScore: statLastScore.textContent,
+      sessions: statSessions.textContent,
+      avgInterview: statAvgInterview.textContent
+    });
+  } catch (e) {
+    console.error("Error loading dashboard stats:", e);
+  }
+}
+
 // ---------- Resume Upload ----------
 const uploadZone = document.getElementById("uploadZone");
 const resumeFile = document.getElementById("resumeFile");
@@ -297,6 +329,8 @@ btnAts.addEventListener("click", async () => {
     matchedSkills.innerHTML = (data.matched_skills || []).slice(0, 30).map(s => `<span class="skill-tag matched">${escapeHtml(s)}</span>`).join("");
     missingSkills.innerHTML = (data.missing_skills || []).slice(0, 30).map(s => `<span class="skill-tag missing">${escapeHtml(s)}</span>`).join("");
     atsResult.classList.remove("hidden");
+    // Reload dashboard after ATS score is calculated
+    await loadDashboardStats();
   } catch (e) {
     alert("ATS error: " + e.message);
   }
@@ -351,6 +385,7 @@ const btnRecord = document.getElementById("btnRecord");
 const recordStatus = document.getElementById("recordStatus");
 const btnEvaluate = document.getElementById("btnEvaluate");
 const btnNextQuestion = document.getElementById("btnNextQuestion");
+const btnEndInterview = document.getElementById("btnEndInterview");
 const evalResult = document.getElementById("evalResult");
 
 let recognition = null;
@@ -494,11 +529,56 @@ btnNextQuestion.addEventListener("click", () => {
     state.currentQuestionIndex++;
     showCurrentQuestion();
   } else {
-    interviewArea.classList.add("hidden");
-    const total = state.evaluationResults.filter(Boolean).length;
-    const avg = total ? state.evaluationResults.reduce((s, e) => s + (e.score || 0), 0) / total : 0;
-    alert(`Interview complete. You answered ${total} questions. Average score: ${avg.toFixed(1)}/10.`);
+    alert("You have answered all questions. Click 'End Interview' to finish and see your results on the dashboard.");
   }
+});
+
+btnEndInterview.addEventListener("click", async () => {
+  const total = state.evaluationResults.filter(Boolean).length;
+  const avg = total ? state.evaluationResults.reduce((s, e) => s + (e.score || 0), 0) / total : 0;
+  
+  console.log("Interview ended with:", {
+    total_questions: state.questions.length,
+    answered: total,
+    average_score: avg,
+    results: state.evaluationResults
+  });
+  
+  // Show saving message
+  alert("Saving your interview results...");
+  
+  // Save session to backend
+  try {
+    const response = await apiFetch("/api/interview/save-session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        question_count: state.questions.length,
+        average_score: avg,
+      }),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("Failed to save session:", response.status, errorData);
+      alert("Error: Could not save session to database. " + errorData.detail);
+    } else {
+      console.log("Session saved successfully");
+      alert(`Interview complete! You answered ${total} questions. Average score: ${avg.toFixed(1)}/10.`);
+    }
+  } catch (e) {
+    console.error("Error saving session:", e);
+    alert("Error: Could not save session: " + e.message);
+  }
+  
+  // Wait a moment then update dashboard stats
+  await new Promise(resolve => setTimeout(resolve, 500));
+  console.log("Loading dashboard stats...");
+  await loadDashboardStats();
+  
+  // Hide interview area and switch back to dashboard view to show updated stats
+  interviewArea.classList.add("hidden");
+  switchView("dashboardView");
 });
 
 // Placeholder for contenteditable

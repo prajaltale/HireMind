@@ -38,6 +38,31 @@ def init_db() -> None:
             )
             """
         )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS ats_scores (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                score INTEGER NOT NULL,
+                resume_text TEXT,
+                job_description TEXT,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS interview_sessions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                question_count INTEGER,
+                average_score REAL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+            """
+        )
         conn.commit()
     finally:
         conn.close()
@@ -119,4 +144,74 @@ def get_user_from_token(token: str) -> Optional[Dict]:
     if not data or "sub" not in data:
         return None
     return get_user_by_email(str(data["sub"]))
+
+
+def save_ats_score(email: str, score: int, resume_text: str, job_description: str) -> None:
+    """Save ATS score for a user."""
+    user = get_user_by_email(email)
+    if not user:
+        return
+    now = datetime.now(timezone.utc).isoformat()
+    conn = _get_conn()
+    try:
+        conn.execute(
+            "INSERT INTO ats_scores (user_id, score, resume_text, job_description, created_at) VALUES (?, ?, ?, ?, ?)",
+            (user["id"], score, resume_text, job_description, now),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def get_last_ats_score(email: str) -> Optional[int]:
+    """Get the most recent ATS score for a user."""
+    user = get_user_by_email(email)
+    if not user:
+        return None
+    conn = _get_conn()
+    try:
+        cur = conn.execute(
+            "SELECT score FROM ats_scores WHERE user_id = ? ORDER BY created_at DESC LIMIT 1",
+            (user["id"],),
+        )
+        row = cur.fetchone()
+    finally:
+        conn.close()
+    return row[0] if row else None
+
+
+def save_interview_session(email: str, question_count: int, average_score: float) -> None:
+    """Save an interview session."""
+    user = get_user_by_email(email)
+    if not user:
+        return
+    now = datetime.now(timezone.utc).isoformat()
+    conn = _get_conn()
+    try:
+        conn.execute(
+            "INSERT INTO interview_sessions (user_id, question_count, average_score, created_at) VALUES (?, ?, ?, ?)",
+            (user["id"], question_count, average_score, now),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def get_interview_stats(email: str) -> Tuple[int, float]:
+    """Get total interview sessions count and average score."""
+    user = get_user_by_email(email)
+    if not user:
+        return 0, 0.0
+    conn = _get_conn()
+    try:
+        cur = conn.execute(
+            "SELECT COUNT(*), AVG(average_score) FROM interview_sessions WHERE user_id = ?",
+            (user["id"],),
+        )
+        row = cur.fetchone()
+    finally:
+        conn.close()
+    count = row[0] or 0
+    avg = row[1] or 0.0
+    return count, float(avg)
 

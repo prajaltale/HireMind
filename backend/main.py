@@ -203,6 +203,8 @@ async def ats_score(payload: dict, current_user: dict = Depends(get_current_user
     if not resume_text or not job_description:
         raise HTTPException(400, "resume_text and job_description are required")
     score, matched, missing = compute_ats_score(resume_text, job_description)
+    # Save to database
+    auth_service.save_ats_score(current_user["email"], score, resume_text, job_description)
     return ATSResponse(
         score=score,
         matched_skills=matched,
@@ -260,6 +262,60 @@ async def evaluate_interview_answer(
         raise HTTPException(503, str(e))
     except Exception as e:
         raise HTTPException(500, str(e))
+
+
+@app.post("/api/interview/save-session")
+async def save_interview_session(payload: dict, current_user: dict = Depends(get_current_user)):
+    """Save an interview session with results."""
+    try:
+        question_count = int(payload.get("question_count", 0))
+        average_score = float(payload.get("average_score", 0.0))
+        print(f"[DEBUG] Saving interview session for {current_user['email']}: {question_count} questions, {average_score} avg score")
+        auth_service.save_interview_session(current_user["email"], question_count, average_score)
+        print(f"[DEBUG] Session saved successfully")
+        return {"success": True, "message": "Session saved"}
+    except Exception as e:
+        print(f"[ERROR] Failed to save session: {str(e)}")
+        raise HTTPException(500, f"Failed to save session: {str(e)}")
+
+
+@app.get("/api/dashboard/stats")
+async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
+    """Get user dashboard statistics."""
+    try:
+        print(f"[DEBUG] Getting dashboard stats for {current_user['email']}")
+        last_ats_score = auth_service.get_last_ats_score(current_user["email"])
+        sessions_count, avg_interview_score = auth_service.get_interview_stats(current_user["email"])
+        print(f"[DEBUG] Stats retrieved: ATS={last_ats_score}, Sessions={sessions_count}, AvgScore={avg_interview_score}")
+        return {
+            "last_ats_score": last_ats_score,
+            "sessions_count": sessions_count,
+            "avg_interview_score": round(avg_interview_score, 1) if avg_interview_score else None,
+        }
+    except Exception as e:
+        print(f"[ERROR] Failed to get dashboard stats: {str(e)}")
+        raise HTTPException(500, f"Failed to get stats: {str(e)}")
+
+
+@app.post("/api/debug/test-save-session")
+async def debug_test_save_session(current_user: dict = Depends(get_current_user)):
+    """Debug endpoint to test saving a session."""
+    try:
+        print(f"[DEBUG] Test: Saving session for {current_user['email']}")
+        auth_service.save_interview_session(current_user["email"], 5, 8.5)
+        print(f"[DEBUG] Test: Session saved")
+        # Now try to retrieve it
+        sessions_count, avg_score = auth_service.get_interview_stats(current_user["email"])
+        print(f"[DEBUG] Test: Retrieved {sessions_count} sessions, avg {avg_score}")
+        return {
+            "success": True,
+            "message": "Test complete",
+            "sessions_count": sessions_count,
+            "avg_score": avg_score
+        }
+    except Exception as e:
+        print(f"[ERROR] Test failed: {str(e)}")
+        raise HTTPException(500, f"Test failed: {str(e)}")
 
 
 @app.get("/health")
