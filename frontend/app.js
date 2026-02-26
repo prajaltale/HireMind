@@ -86,6 +86,7 @@ function logout() {
   auth.user = null;
   persistAuth();
   syncAuthUI();
+  resetAppState();
 }
 
 function syncAuthUI() {
@@ -130,6 +131,55 @@ function switchView(viewId) {
   );
   const target = document.getElementById(viewId);
   if (target) target.classList.remove("hidden");
+}
+
+function resetAppState() {
+  state = {
+    resumeText: "",
+    jobDescription: "",
+    atsData: null,
+    questions: [],
+    currentQuestionIndex: 0,
+    evaluationResults: [],
+    sessions: 0,
+    avgInterviewScore: null,
+  };
+
+  // Clear UI elements
+  if (parseStatus) {
+    parseStatus.textContent = "";
+    parseStatus.classList.add("hidden");
+  }
+  if (jobDescEl) jobDescEl.value = "";
+  if (resumeFile) resumeFile.value = "";
+
+  if (atsResult) atsResult.classList.add("hidden");
+  if (atsScoreNum) atsScoreNum.textContent = "0";
+  if (atsCircle) atsCircle.style.background = "var(--border)";
+  if (matchedSkills) matchedSkills.innerHTML = "";
+  if (missingSkills) missingSkills.innerHTML = "";
+
+  if (feedbackResult) feedbackResult.classList.add("hidden");
+  if (feedbackStrengths) feedbackStrengths.innerHTML = "";
+  if (feedbackWeaknesses) feedbackWeaknesses.innerHTML = "";
+  if (feedbackSuggestions) feedbackSuggestions.innerHTML = "";
+  if (feedbackRecommendation) feedbackRecommendation.textContent = "";
+
+  if (interviewArea) interviewArea.classList.add("hidden");
+  if (currentQuestion) currentQuestion.textContent = "";
+  if (answerText) {
+    answerText.textContent = "";
+    answerText.classList.remove("has-content");
+  }
+  if (evalResult) {
+    evalResult.classList.add("hidden");
+    evalResult.innerHTML = "";
+  }
+
+  // Dashboard stats
+  if (statLastScore) statLastScore.textContent = "–";
+  if (statSessions) statSessions.textContent = "0";
+  if (statAvgInterview) statAvgInterview.textContent = "–";
 }
 
 navItems.forEach((btn) => {
@@ -191,6 +241,7 @@ authForm.addEventListener("submit", async (e) => {
       throw new Error(msg);
     }
     const data = await res.json();
+    resetAppState();
     setAuth(data.access_token, data.user);
     switchView("dashboardView");
   } catch (err) {
@@ -213,6 +264,7 @@ btnGoogleSignIn.addEventListener("click", async () => {
     });
     if (!res.ok) throw new Error((await res.json()).detail || "Google sign-in failed");
     const data = await res.json();
+    resetAppState();
     setAuth(data.access_token, data.user);
     switchView("dashboardView");
   } catch (err) {
